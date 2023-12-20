@@ -8,51 +8,55 @@ const PATH_TO_VIEWS_FILE = path.join(__dirname, 'views.json');
 const app = express();
 
 function renderPage(options) {
-    return `
+  return `
         <h1>${options.title}</h1>
         <a href="${options.link.href}">${options.link.name}</a>
         ${options.views ? `<p>Просмотров — ${options.views}</p>` : ''}
-    `
-};
+    `;
+}
 
-function writeFile(path, data) {
-    fs.writeFile(path, JSON.stringify(data, '', 2), err => {
-        if (err) {
-            console.error('Ошибка записи файла!');
-        }
-    });
-};
+function writeFile(pathFile, data) {
+  fs.writeFile(pathFile, JSON.stringify(data, '', 2), (err) => {
+    if (err) {
+      console.error('Ошибка записи файла!');
+    }
+  });
+}
 
-function handlerRequestGET(req, res, pageOptions, path = PATH_TO_VIEWS_FILE) {
+function handlerRequestGET(pageOptions, pathFile = PATH_TO_VIEWS_FILE) {
+  return (req, res) => {
     let views = 0;
 
-    fs.readFile(path, 'utf-8', (error, data) => {
-        if (error) console.error(error);
+    fs.readFile(pathFile, 'utf-8', (error, data) => {
+      if (error) console.error(error);
 
-        const viewsData = JSON.parse(data);
-        views = ++viewsData[req.url];
-        writeFile(path, viewsData);
+      const viewsData = JSON.parse(data);
+      viewsData[req.url] += 1;
+      views = viewsData[req.url];
+      writeFile(pathFile, viewsData);
 
-        res.send(renderPage({
-            ...pageOptions,
-            views: views,
-        }));
+      res.send(renderPage({
+        ...pageOptions,
+        views,
+      }));
     });
-};
+  };
+}
 
+app.get(
+  '/',
+  handlerRequestGET({
+    title: 'Главная страница',
+    link: { name: 'Страница about', href: '/about' },
+  }),
+);
 
-app.get('/', (req, res) => {
-    handlerRequestGET(req, res, {
-        title: 'Главная страница',
-        link: { name: 'Страница about', href: '/about', },
-    })
-});
-
-app.get('/about', (req, res) => {
-    handlerRequestGET(req, res, {
-        title: 'Страница about',
-        link: { name: 'Главная страница', href: '/', },
-    })
-});
+app.get(
+  '/about',
+  handlerRequestGET({
+    title: 'Страница about',
+    link: { name: 'Главная страница', href: '/' },
+  }),
+);
 
 app.listen(PORT);
